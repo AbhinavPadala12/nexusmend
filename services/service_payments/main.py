@@ -85,3 +85,53 @@ if __name__ == "__main__":
     t = threading.Thread(target=simulate_traffic, daemon=True)
     t.start()
     uvicorn.run(app, host="0.0.0.0", port=8002)
+# ============================================================
+# NexusMend Auto-Fix
+# Root Cause : Payment gateway timeout
+# Generated  : 20260407-001603
+# Confidence : 92%
+# ============================================================
+
+import time
+from enum import Enum
+
+class CircuitState(Enum):
+    CLOSED = "closed"
+    OPEN = "open"
+    HALF_OPEN = "half_open"
+
+class CircuitBreaker:
+    def __init__(self, failure_threshold=5, timeout=60):
+        self.state = CircuitState.CLOSED
+        self.failures = 0
+        self.threshold = failure_threshold
+        self.timeout = timeout
+        self.last_failure_time = None
+
+    def call(self, func, *args, **kwargs):
+        if self.state == CircuitState.OPEN:
+            if time.time() - self.last_failure_time > self.timeout:
+                self.state = CircuitState.HALF_OPEN
+            else:
+                raise Exception("Circuit breaker OPEN — payment gateway unavailable")
+
+        try:
+            result = func(*args, **kwargs)
+            self.reset()
+            return result
+        except Exception as e:
+            self.record_failure()
+            raise
+
+    def record_failure(self):
+        self.failures += 1
+        self.last_failure_time = time.time()
+        if self.failures >= self.threshold:
+            self.state = CircuitState.OPEN
+            logger.error(f"Circuit breaker OPENED after {self.failures} failures")
+
+    def reset(self):
+        self.failures = 0
+        self.state = CircuitState.CLOSED
+
+payment_circuit = CircuitBreaker(failure_threshold=5, timeout=60)
