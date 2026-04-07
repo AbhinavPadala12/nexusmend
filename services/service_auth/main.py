@@ -102,3 +102,39 @@ if __name__ == "__main__":
     t = threading.Thread(target=simulate_traffic, daemon=True)
     t.start()
     uvicorn.run(app, host="0.0.0.0", port=8003)
+# ============================================================
+# NexusMend Auto-Fix
+# Root Cause : Session storage infrastructure failure
+# Generated  : 20260407-001710
+# Confidence : 92%
+# ============================================================
+
+import redis
+from functools import lru_cache
+
+redis_client = None
+local_cache = {}
+
+def get_session_store():
+    global redis_client
+    try:
+        if redis_client is None:
+            redis_client = redis.Redis(host='localhost', port=6379, db=0)
+        redis_client.ping()
+        return redis_client
+    except Exception:
+        logger.warning("Redis unreachable — falling back to local cache")
+        return None
+
+def get_session(session_id: str):
+    store = get_session_store()
+    if store:
+        return store.get(session_id)
+    return local_cache.get(session_id)
+
+def set_session(session_id: str, data: dict):
+    store = get_session_store()
+    if store:
+        store.setex(session_id, 3600, json.dumps(data))
+    else:
+        local_cache[session_id] = data
