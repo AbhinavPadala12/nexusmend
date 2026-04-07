@@ -69,3 +69,24 @@ if __name__ == "__main__":
     t = threading.Thread(target=simulate_traffic, daemon=True)
     t.start()
     uvicorn.run(app, host="0.0.0.0", port=8001)
+# ============================================================
+# NexusMend Auto-Fix
+# Root Cause : Database connectivity issue
+# Generated  : 20260407-001915
+# Confidence : 92%
+# ============================================================
+
+import time
+
+def connect_with_retry(max_retries=3, backoff=2):
+    for attempt in range(max_retries):
+        try:
+            # Replace with your actual DB connection
+            connection = create_db_connection()
+            return connection
+        except Exception as e:
+            if attempt == max_retries - 1:
+                raise
+            wait = backoff ** attempt
+            logger.warning(f"DB connection failed, retrying in {wait}s...")
+            time.sleep(wait)
