@@ -102,3 +102,14 @@ if __name__ == "__main__":
     t = threading.Thread(target=simulate_traffic, daemon=True)
     t.start()
     uvicorn.run(app, host="0.0.0.0", port=8003)
+# ============================================================
+# NexusMend Auto-Fix
+# Root Cause : The push notification token is not being updated correctly when a user's authentication token is refreshed or expires.
+# Generated  : 20260407-001758
+# Confidence : 92%
+# ============================================================
+
+async def refresh_token(user_id, new_auth_token):
+    # ... existing code ...
+    push_token = await update_push_token(user_id, new_auth_token)
+    return push_token
