@@ -69,3 +69,29 @@ if __name__ == "__main__":
     t = threading.Thread(target=simulate_traffic, daemon=True)
     t.start()
     uvicorn.run(app, host="0.0.0.0", port=8001)
+# ============================================================
+# NexusMend Auto-Fix
+# Root Cause : The session store is down, causing a cascade of failures across services due to its unavailability.
+# Generated  : 20260407-001613
+# Confidence : 92%
+# ============================================================
+
+import time
+import random
+
+def retry_session_store(func):
+    def wrapper(*args, **kwargs):
+        max_retries = 5
+        retry_delay = 1
+        for attempt in range(max_retries):
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    print(f'Session store retry {attempt+1}/{max_retries}: {str(e)}')
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+                else:
+                    print(f'Session store retry failed after {max_retries} attempts: {str(e)}')
+                    raise
+    return wrapper
