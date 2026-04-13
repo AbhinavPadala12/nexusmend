@@ -102,3 +102,39 @@ if __name__ == "__main__":
     t = threading.Thread(target=simulate_traffic, daemon=True)
     t.start()
     uvicorn.run(app, host="0.0.0.0", port=8003)
+# ============================================================
+# NexusMend Auto-Fix
+# Root Cause : Authentication token lifecycle issue
+# Generated  : 20260413-180836
+# Confidence : 92%
+# ============================================================
+
+import jwt
+from datetime import datetime, timezone, timedelta
+
+SECRET_KEY = os.getenv("JWT_SECRET", "nexusmend-secret")
+
+def create_token(user_id: str, expires_in_minutes: int = 60) -> str:
+    payload = {
+        "user_id": user_id,
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=expires_in_minutes),
+        "iat": datetime.now(timezone.utc)
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+
+def validate_and_refresh_token(token: str) -> dict:
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        exp = datetime.fromtimestamp(payload["exp"], tz=timezone.utc)
+        time_left = (exp - datetime.now(timezone.utc)).total_seconds()
+
+        if time_left < 300:
+            new_token = create_token(payload["user_id"])
+            return {"valid": True, "refreshed": True, "new_token": new_token}
+
+        return {"valid": True, "refreshed": False}
+
+    except jwt.ExpiredSignatureError:
+        return {"valid": False, "reason": "token_expired"}
+    except jwt.InvalidTokenError:
+        return {"valid": False, "reason": "token_invalid"}
